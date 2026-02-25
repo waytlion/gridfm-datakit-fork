@@ -2,12 +2,18 @@
 Main CLI script for comparing two-step OPF approach against ground truth.
 
 Usage:
-    python python exp1/generate_metrics/compare.py \
-        --predicted-opf-dir exp1/opf_results/  \
-        --ground-truth-dir data_out/3yrs/data_out/no_pertubations/case14_ieee/raw \
-        --output-dir results/two_step_comparison \
+    cd gridfm-datakit-fork/
+    python exp1/generate_metrics/compare.py \
+        --predicted-opf-base-dir exp1/data/data_out \
+        --ground-truth-dir data_out/3yrs/no_pertubations/case14_ieee/raw \
+        --output-dir exp1/results \
         --dataset case14_ieee
-        # No --methods flag = processes all methods
+        
+    Or with defaults:
+    python exp1/generate_metrics/compare.py  # Uses default paths
+    
+    Compare specific methods only:
+    python exp1/generate_metrics/compare.py --methods xgb sarima
 """
 
 import argparse
@@ -151,12 +157,24 @@ def generate_comparison_summary(summaries: list, output_dir: Path, dataset: str)
 
 def main():
     parser = argparse.ArgumentParser(description="Compare two-step OPF approach vs ground truth")
-    parser.add_argument("--ground-truth-dir", type=Path, required=True,
-                        help="Path to ground-truth OPF parquet directory")
-    parser.add_argument("--predicted-opf-base-dir", type=Path, required=True,
-                        help="Base directory containing {method}/case14_ieee/raw subdirs")
-    parser.add_argument("--output-dir", type=Path, required=True,
-                        help="Output directory for comparison results")
+    parser.add_argument(
+        "--ground-truth-dir", 
+        type=Path, 
+        default=Path("data_out/3yrs/no_pertubations/case14_ieee/raw"),
+        help="Path to ground-truth OPF parquet directory"
+    )
+    parser.add_argument(
+        "--predicted-opf-base-dir", 
+        type=Path, 
+        default=Path("exp1/data/data_out"),
+        help="Base directory containing {method}/case14_ieee/raw subdirs"
+    )
+    parser.add_argument(
+        "--output-dir", 
+        type=Path, 
+        default=Path("exp1/results"),
+        help="Output directory for comparison results"
+    )
     parser.add_argument("--dataset", type=str, default="case14_ieee",
                         help="Dataset name for output file naming")
     parser.add_argument("--methods", nargs="+", default=FORECAST_METHODS,

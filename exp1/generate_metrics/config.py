@@ -4,8 +4,9 @@ Configuration for two-step OPF comparison pipeline.
 
 from pathlib import Path
 
-# Paths
-FORECASTS_PARQUET = Path("exp1/forecasts.parquet")
+# Paths (relative to repo root)
+_REPO_ROOT = Path(__file__).parent.parent.parent  # gridfm-datakit-fork/
+FORECASTS_PARQUET = _REPO_ROOT / "exp1" / "data" / "data_in" / "forecasts.parquet"
 
 # Forecast methods available in forecasts.parquet
 FORECAST_METHODS = ["xgb", "snaive", "tgt", "sarima"]
@@ -23,7 +24,7 @@ COLUMN_MAPPINGS = {
         "bus": "bus",
         "pd": "Pd",
         "qd": "Qd",
-        "pg": "Pg",  # NOTE: Assuming already aggregated per bus. Verify with colleague.
+        "pg": "Pg",  # NOTE:Assuming already aggregated per bus. Verify withAlban!
         "qg": "Qg",
         "vm": "Vm",
         "va": "Va",
@@ -44,7 +45,7 @@ COLUMN_MAPPINGS = {
 }
 
 # NOTE: All units assumed as-labeled in parquets (MW, MVar, p.u., rad, EUR).
-# No conversion applied. Verify consistency with colleague.
+# No conversion applied. Verify with Alban.
 
 PARQUET_FILES = {
     "bus": "bus_data.parquet",
