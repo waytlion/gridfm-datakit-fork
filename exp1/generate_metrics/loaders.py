@@ -4,31 +4,58 @@ Data loading and alignment utilities for two-step OPF comparison.
 
 import pandas as pd
 from pathlib import Path
-from typing import Tuple
-import config
-from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET
+from typing import Tuple, Dict
+import config 
+from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET, BUS_COLUMNS, GEN_COLUMNS, FORECAST_COLUMNS
 
 
 def load_forecasts() -> pd.DataFrame:
     """
     Load all forecast methods from unified parquet file.
-    Expected columns: load_scenario_idx, bus_id, true, xgb, snaive, tgt, sarima.
+    Uses parquet column names directly: load_scenario_idx, bus_id, true, xgb, snaive, tgt, sarima.
+    
+    Returns:
+        DataFrame with forecast columns (parquet names unchanged).
     """
-    return pd.read_parquet(FORECASTS_PARQUET)
+    df = pd.read_parquet(FORECASTS_PARQUET)
+    
+    # Validate all forecast methods are present
+    missing_methods = set(FORECAST_METHODS) - set(df.columns)
+    if missing_methods:
+        raise ValueError(f"Missing forecast methods in parquet: {missing_methods}")
+    
+    # Validate expected columns exist
+    missing_cols = set(FORECAST_COLUMNS) - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing columns in forecasts.parquet: {missing_cols}")
+    
+    return df
 
 
 def load_datakit_bus(parquet_dir: Path) -> pd.DataFrame:
-    """Load bus data from datakit parquet output.
-    Expected columns: load_scenario_idx, bus, Pd, Qd, Pg, Qg, Vm, Va, PQ, PV, REF.
-    """
-    return pd.read_parquet(parquet_dir / PARQUET_FILES["bus"])
+    """Load bus data from datakit parquet output."""
+    path = parquet_dir / PARQUET_FILES["bus"]
+    df = pd.read_parquet(path)
+    
+    # Validate expected columns exist
+    missing_cols = set(BUS_COLUMNS) - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing columns in bus_data.parquet: {missing_cols}")
+    
+    return df
 
 
 def load_datakit_gen(parquet_dir: Path) -> pd.DataFrame:
-    """Load generator data from datakit parquet output.
-    Expected columns: load_scenario_idx, idx, bus, p_mw, q_mvar, cp0_eur, cp1_eur_per_mw, cp2_eur_per_mw2.
-    """
-    return pd.read_parquet(parquet_dir / PARQUET_FILES["gen"])
+    """Load generator data from datakit parquet output."""
+    path = parquet_dir / PARQUET_FILES["gen"]
+    df = pd.read_parquet(path)
+    
+    # Validate expected columns exist
+    missing_cols = set(GEN_COLUMNS) - set(df.columns)
+    if missing_cols:
+        raise ValueError(f"Missing columns in gen_data.parquet: {missing_cols}")
+    
+    return df
 
 
 def prepare_load_forecast_comparison(

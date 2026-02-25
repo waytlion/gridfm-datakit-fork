@@ -1,10 +1,10 @@
 # Outstanding Tasks
 
-## Phase 2: Visualization (Deferred)
+### Visualization (Deferred)
 
 GraphKit generates several plots in `test_plots/{dataset}/`:
 
-### Not Yet Implemented
+#### Not Yet Implemented
 1. **Objective cost scatter plot**
    - X-axis: Ground-truth total cost (EUR)
    - Y-axis: Predicted total cost (EUR)
@@ -31,19 +31,11 @@ GraphKit generates several plots in `test_plots/{dataset}/`:
 - Extend `compare.py` with `--generate-plots` flag
 - Save plots to `{output_dir}/{method}/plots/`
 
-## Phase 3: Extensions (Optional)
-
-1. **Per-scenario error breakdown**
-   - CSV with columns: [scenario, mae_pd, rmse_vm, optimality_gap, ...]
-   - Identify worst-case scenarios for failure analysis
+##  Extensions 
 
 2. **Temporal analysis**
    - If `forecasts.parquet` has temporal structure (timestamps)
    - Plot error metrics over time (seasonal patterns?)
-
-3. **Statistical significance tests**
-   - Paired t-tests between methods
-   - Determine if performance differences are statistically significant
 
 4. **Multi-horizon comparison**
    - If `horizon_step` becomes relevant
@@ -51,8 +43,8 @@ GraphKit generates several plots in `test_plots/{dataset}/`:
 
 ## Verification Checklist (Before Publishing Results)
 
-- [ ] Confirm with colleague: `bus_data.parquet` Pg is pre-aggregated
-- [ ] Confirm with colleague: All units are correctly assumed (MW/MVar/p.u./rad/EUR)
+- [ ] Confirm with Alban: `bus_data.parquet` Pg is pre-aggregated
+- [ ] Confirm with Alban: All units are correctly assumed (MW/MVar/p.u./rad/EUR)
 - [ ] Validate scenario alignment: all test scenarios present in both forecast and OPF results
 - [ ] Cross-check one method's results manually (spot-check MAE/RMSE calculations)
 - [ ] Compare summary table against GraphKit's test output for sanity check

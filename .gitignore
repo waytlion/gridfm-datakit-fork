@@ -23,4 +23,3 @@ pfdelta/data/
 site/
 exp1/generate_opf_inputs/input_for_opf/
 generate_timeseries/precomputed_load_profiles.csv
-gridfm_datakit/network.py
