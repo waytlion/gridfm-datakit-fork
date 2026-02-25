@@ -59,17 +59,19 @@ def compare_single_method(
     # 1. Load forecast MAE (Pd only, since forecasts.parquet has active power only)
     print("Computing load forecast MAE...")
     forecast_comparison = prepare_load_forecast_comparison(forecasts_df, method)
-    mae_pd = compute_mae(forecast_comparison.rename(columns={"pred": "pd_pred", "true": "pd_true"}), ["pd"])
+    # Rename for compute_mae which expects {feature}_pred and {feature}_true
+    forecast_for_mae = forecast_comparison.rename(columns={"pred": "Pd_pred", "true": "Pd_true"})
+    mae_pd = compute_mae(forecast_for_mae, ["Pd"])["Pd"]
     
     # Save forecast MAE
     forecast_mae_df = pd.DataFrame([{
         "Feature": "Pd",
-        "MAE": mae_pd["pd"],
-        "Unit": "MW (assumed from parquet)",
+        "MAE": mae_pd,
+        "Unit": "MW",
     }])
     forecast_mae_path = method_output_dir / OUTPUT_TEMPLATES["forecast_mae"].format(dataset=dataset)
     forecast_mae_df.to_csv(forecast_mae_path, index=False)
-    print(f"  MAE Pd: {mae_pd['pd']:.4f} MW")
+    print(f"  MAE Pd: {mae_pd:.4f} MW")
     
     # 2. Load OPF results
     print("Loading OPF results...")
@@ -81,12 +83,12 @@ def compare_single_method(
     # 3. Align OPF results
     print("Aligning OPF results...")
     bus_aligned, gen_aligned = align_opf_results(pred_bus, true_bus, pred_gen, true_gen)
-    print(f"  Aligned {len(bus_aligned)} bus observations across {bus_aligned['scenario'].nunique()} scenarios")
+    print(f"  Aligned {len(bus_aligned)} bus observations across {bus_aligned['load_scenario_idx'].nunique()} scenarios")
     print(f"  Aligned {len(gen_aligned)} generator observations")
     
     # 4. Compute RMSE by bus type
     print("Computing RMSE by bus type...")
-    rmse_df = compute_rmse_by_bus_type(bus_aligned, ["vm", "va", "pg", "qg"])
+    rmse_df = compute_rmse_by_bus_type(bus_aligned, ["Vm", "Va", "Pg", "Qg"])
     rmse_path = method_output_dir / OUTPUT_TEMPLATES["rmse"].format(dataset=dataset)
     rmse_df.to_csv(rmse_path, index=False)
     print(f"  Saved RMSE table: {rmse_path}")
@@ -132,11 +134,11 @@ def compare_single_method(
     # Return summary for aggregation
     return {
         "method": method,
-        "mae_pd": mae_pd["pd"],
-        "rmse_vm": rmse_summary.get("VM", float("nan")),
-        "rmse_va": rmse_summary.get("VA", float("nan")),
-        "rmse_pg_bus": rmse_summary.get("PG", float("nan")),  # Bus-level aggregated
-        "rmse_qg": rmse_summary.get("QG", float("nan")),
+        "mae_pd": mae_pd,
+        "rmse_vm": rmse_summary.get("Vm", float("nan")),
+        "rmse_va": rmse_summary.get("Va", float("nan")),
+        "rmse_pg_bus": rmse_summary.get("Pg", float("nan")),  # Bus-level aggregated
+        "rmse_qg": rmse_summary.get("Qg", float("nan")),
         "rmse_pg_gen": gen_rmse,  # Generator-level
         "optimality_gap_pct": cost_metrics["mean_optimality_gap_pct"],
     }
@@ -189,7 +191,7 @@ def main():
     # Load forecasts once (shared across all methods)
     print("Loading forecasts...")
     forecasts_df = load_forecasts()
-    print(f"Loaded {len(forecasts_df)} forecast observations for {forecasts_df['scenario'].nunique()} scenarios")
+    print(f"Loaded {len(forecasts_df)} forecast observations for {forecasts_df['load_scenario_idx'].nunique()} scenarios")
     
     # Process each method
     summaries = []
@@ -197,7 +199,7 @@ def main():
         predicted_opf_dir = args.predicted_opf_base_dir / method / args.dataset / "raw"
         
         if not predicted_opf_dir.exists():
-            print(f"\n⚠️  Skipping {method}: OPF results not found at {predicted_opf_dir}")
+            print(f"\n  Skipping {method}: OPF results not found at {predicted_opf_dir}")
             continue
         
         try:
@@ -211,14 +213,14 @@ def main():
             )
             summaries.append(summary)
         except Exception as e:
-            print(f"\n❌ Error processing {method}: {e}")
+            print(f"\nERROR processing {method}: {e}")
             raise
     
     # Generate comparison summary
     if summaries:
         generate_comparison_summary(summaries, args.output_dir, args.dataset)
     else:
-        print("\n⚠️  No methods successfully processed.")
+        print("\nERROR No methods successfully processed.")
 
 
 if __name__ == "__main__":

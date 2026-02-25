@@ -4,50 +4,31 @@ Data loading and alignment utilities for two-step OPF comparison.
 
 import pandas as pd
 from pathlib import Path
-from typing import Tuple, Dict
-from .config import COLUMN_MAPPINGS, PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET
+from typing import Tuple
+import config
+from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET
 
 
 def load_forecasts() -> pd.DataFrame:
     """
     Load all forecast methods from unified parquet file.
-    
-    Returns:
-        DataFrame with columns: [scenario, bus, true, xgb, snaive, tgt, sarima, horizon_step]
+    Expected columns: load_scenario_idx, bus_id, true, xgb, snaive, tgt, sarima.
     """
-    df = pd.read_parquet(FORECASTS_PARQUET)
-    cols = COLUMN_MAPPINGS["forecast_parquet"]
-    
-    # Rename to standard names
-    rename_map = {
-        cols["scenario"]: "scenario",
-        cols["bus"]: "bus",
-        cols["true"]: "true",
-    }
-    df = df.rename(columns=rename_map)
-    
-    # Validate all forecast methods are present
-    missing_methods = set(FORECAST_METHODS) - set(df.columns)
-    if missing_methods:
-        raise ValueError(f"Missing forecast methods in parquet: {missing_methods}")
-    
-    return df
+    return pd.read_parquet(FORECASTS_PARQUET)
 
 
 def load_datakit_bus(parquet_dir: Path) -> pd.DataFrame:
-    """Load bus data from datakit parquet output."""
-    path = parquet_dir / PARQUET_FILES["bus"]
-    df = pd.read_parquet(path)
-    cols = COLUMN_MAPPINGS["datakit_bus"]
-    return df.rename(columns={v: k for k, v in cols.items()})
+    """Load bus data from datakit parquet output.
+    Expected columns: load_scenario_idx, bus, Pd, Qd, Pg, Qg, Vm, Va, PQ, PV, REF.
+    """
+    return pd.read_parquet(parquet_dir / PARQUET_FILES["bus"])
 
 
 def load_datakit_gen(parquet_dir: Path) -> pd.DataFrame:
-    """Load generator data from datakit parquet output."""
-    path = parquet_dir / PARQUET_FILES["gen"]
-    df = pd.read_parquet(path)
-    cols = COLUMN_MAPPINGS["datakit_gen"]
-    return df.rename(columns={v: k for k, v in cols.items()})
+    """Load generator data from datakit parquet output.
+    Expected columns: load_scenario_idx, idx, bus, p_mw, q_mvar, cp0_eur, cp1_eur_per_mw, cp2_eur_per_mw2.
+    """
+    return pd.read_parquet(parquet_dir / PARQUET_FILES["gen"])
 
 
 def prepare_load_forecast_comparison(
@@ -61,14 +42,14 @@ def prepare_load_forecast_comparison(
         method: Forecast method name (e.g., 'xgb').
     
     Returns:
-        DataFrame with columns: [scenario, bus, pred, true] for Pd only.
-        Note: forecasts.parquet contains active load (Pd) only, not reactive (Qd).
+        DataFrame with forecast comparison columns
     """
     if method not in FORECAST_METHODS:
         raise ValueError(f"Unknown method '{method}'. Available: {FORECAST_METHODS}")
     
-    return forecasts_df[["scenario", "bus", method, "true"]].rename(
-        columns={method: "pred", "true": "true"}
+    # Select columns and rename to standard names for comparison
+    return forecasts_df[["load_scenario_idx", "bus_id", method, "true"]].rename(
+        columns={"load_scenario_idx": "scenario", "bus_id": "bus", method: "pred"}
     )
 
 
@@ -84,25 +65,25 @@ def align_opf_results(
     Returns:
         (bus_merged, gen_merged): Aligned dataframes with _pred and _true suffixes.
     """
-    # Align bus data
+    # Align bus data on (load_scenario_idx, bus)
     bus_merged = pred_bus.merge(
         true_bus,
-        on=["scenario", "bus"],
+        on=["load_scenario_idx", "bus"],
         how="inner",
         suffixes=("_pred", "_true"),
     )
     
-    # Align generator data
+    # Align generator data on (load_scenario_idx, idx)
     gen_merged = pred_gen.merge(
         true_gen,
-        on=["scenario", "gen_idx"],
+        on=["load_scenario_idx", "idx"],
         how="inner",
         suffixes=("_pred", "_true"),
     )
     
     # Validate scenario coverage
-    pred_scenarios = set(pred_bus["scenario"].unique())
-    true_scenarios = set(true_bus["scenario"].unique())
+    pred_scenarios = set(pred_bus["load_scenario_idx"].unique())
+    true_scenarios = set(true_bus["load_scenario_idx"].unique())
     
     if pred_scenarios != true_scenarios:
         missing = true_scenarios - pred_scenarios
