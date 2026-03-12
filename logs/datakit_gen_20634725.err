@@ -1,0 +1,2 @@
+[2026-03-03T10:16:28.685] error: execve(): gridfm-datakit: No such file or directory
+srun: error: paul20: task 0: Exited with exit code 2

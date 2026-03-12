@@ -1,0 +1,2 @@
+/home/sc.uni-leipzig.de/og98ohex/thesis_env/bin/python: Error while finding module specification for 'gridfm-datakit.cli' (ModuleNotFoundError: No module named 'gridfm-datakit')
+srun: error: paul20: task 0: Exited with exit code 1
