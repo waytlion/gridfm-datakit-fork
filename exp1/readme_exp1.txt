@@ -14,7 +14,9 @@
 
 # NOTES
 1. Qd is not forecasted by baseline models -> derived by applying scaling factor to Pd
-
+2. TODO: move step 3 to cluster 
+      - (oke nice, datakit runs now. But since i run it on my laptop, its quiet slow. I have a cluster ( ssh tibo990i@login1.barnard.hpc.tu-dresden.de))
+      - this script was a first thought for cluster: exp1\generate_opf_inputs\run_datakit_all_models.sbatch
 
 # Abstarct Description
 Input: read in the predicted loads (which were predicted in Step 1 in the baseline approach)

@@ -4,10 +4,10 @@ Main CLI script for comparing two-step OPF approach against ground truth.
 Usage:
     cd gridfm-datakit-fork/
     python exp1/generate_metrics/compare.py \
-        --predicted-opf-base-dir exp1/data/data_out \
-        --ground-truth-dir data_out/3yrs/no_pertubations/case14_ieee/raw \
-        --output-dir exp1/results \
-        --dataset case14_ieee
+        --predicted-opf-base-dir exp1/data/data_out/case118_horizon_1_3yr \
+        --ground-truth-dir ../data/data_out/3yr_2019-2021/case118_ieee/raw \
+        --output-dir exp1/results/case118_horizon1_3yr2019-2021 \
+        --dataset case118_ieee
         
     Or with defaults:
     python exp1/generate_metrics/compare.py  # Uses default paths
