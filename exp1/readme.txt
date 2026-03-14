@@ -1,6 +1,20 @@
 # Abstract
 ## Goal: Perform Step 2, in the 2-Step Baseline Approach
 
+1. Load baseline predictions from cluster "bernard" to local
+      -> scp tibo990i@login1.barnard.hpc.tu-dresden.de:/home/tibo990i/Thesis_Repo/phase1_baseline/*parquet exp1\data\data_in
+2. Transform predictions into datakit input format called "precomputed_profiles"
+      -> EXECUTE: exp1\generate_opf_inputs\exp1_step2_transform_benchmark_to_datakit.ipynb
+      -> OUTPUT:  exp1\data\precomputed_profiles\
+      -> OPTIONAL: Load precomputed_profiles .csv files to google drive 
+3. Run datakit
+      -> EXECUTE ONCE PER BASELINE MODEL: gridfm_datakit generate .\exp1\config\case14_generate_opf_for_forecast.yaml
+      -> OUTPUT: exp1\data\data_out
+4. Compare AC-OPF results derived from predictions with ground truth
+      -> READ AND EXECUTE: exp1\generate_metrics\compare.py
+      -> OUTPUT: exp1\results\case118_horizon1_3yr2019-2021
+
+
 Input: read in the predicted loads (which were predicted in Step 1 in the baseline approach)
 
 PutPut: 
