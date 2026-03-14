@@ -1,0 +1,6 @@
+Metric,Value,Unit
+Generator Pg RMSE,2.1455704333791648,MW
+Mean Optimality Gap,1.1092791984549955,%
+Median Optimality Gap,0.8638176631811294,%
+Max Optimality Gap,8.478264616501875,%
+Physics Constraint Violations,N/A - AC-OPF solver guarantees feasibility,-

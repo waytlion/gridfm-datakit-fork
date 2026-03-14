@@ -1,5 +1,5 @@
 network:
-  name: "case14_ieee" # Name of the power grid network (without extension)
+  name: "case118_ieee" # Name of the power grid network (without extension)
   source: "pglib" # Data source for the grid; options: pglib, file
   # WARNING: the following parameter is only used if source is "file"
   network_dir: "scripts/grids" # if using source "file", this is the directory containing the network file
@@ -8,7 +8,8 @@ load:
   generator: "precomputed_profile" # Name of the load generator; options: agg_load_profile, powergraph
   agg_profile: "" # Name of the aggregated load profile
   #scenario_file: "F:/studium/MA-code/phase1_generation/preprocessing/precomputed_load_profiles.csv" # precomputed scenarios (cols: load_scenario, load, p_mw, q_mvar)
-  scenario_file: "D:/Data/studium/Master/MA_Code/gridfm-datakit-fork/exp1/data/precomputed_profiles/case14_ieee/xgb.csv" # precomputed scenarios (cols: load_scenario, load, p_mw, q_mvar)
+  scenario_file: "D:/Data/studium/Master/MA_Code/gridfm-datakit-fork/exp1/data/precomputed_profiles/case118_ieee_horizon1_3yr/snaive.csv"
+   # precomputed scenarios (cols: load_scenario, load, p_mw, q_mvar)
   scenarios: 3942 #! Number of predicted load scenarios/timesteps
   # WARNING: the following parameters are only used if generator is "agg_load_profile"
   # if using generator "powergraph", these parameters are ignored
@@ -30,7 +31,8 @@ admittance_perturbation:
 
 settings:
   num_processes: 2 # Number of parallel processes to use
-  data_dir: "./data_out/xgb" #* Directory to save generated data relative to the project root
+  data_dir: "./exp1/data/data_out/case118_horizon_1_3yr/snaive" #! Directory to save generated data relative to the project root
+  
   large_chunk_size: 500 # Number of load scenarios processed before saving
   overwrite: true # If true, overwrites existing files, if false, appends to files
   mode: "opf" # Mode of the script; options: pf, opf. pf: power flow data where one or more operating limits – the inequality constraints defined in OPF, e.g., voltage magnitude or branch limits – may be violated. opf:  generates datapoints for training OPF solvers, with cost-optimal dispatches that satisfy all operating limits (OPF-feasible)
