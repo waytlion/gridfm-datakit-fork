@@ -10,7 +10,9 @@
 VENV_PATH="$HOME/gridfm-datakit-fork/datakit_env"
 CONFIG="exp1/configs/case118_generate_opf_for_forecast.yaml"
 
-module --force purge
+module reset
+module load GCC/14.2.0
+
 source $VENV_PATH/bin/activate
 
 echo "=========================================="
