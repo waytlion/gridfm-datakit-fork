@@ -19,7 +19,7 @@ Usage:
 import argparse
 from pathlib import Path
 import pandas as pd
-from config import FORECAST_METHODS, OUTPUT_TEMPLATES
+from config import FORECAST_METHODS, OUTPUT_TEMPLATES, FORECASTS_PARQUET, FORECAST_SEASONALITY
 from loaders import (
     load_forecasts,
     load_datakit_bus,
@@ -32,6 +32,7 @@ from metrics import (
     compute_rmse_by_bus_type,
     compute_generator_rmse,
     compute_cost_metrics,
+    compute_forecast_metrics_table,
 )
 
 
@@ -187,6 +188,18 @@ def main():
                         help="Dataset name for output file naming")
     parser.add_argument("--methods", nargs="+", default=FORECAST_METHODS,
                         help="Forecast methods to compare (default: all)")
+    parser.add_argument(
+        "--forecasts-parquet",
+        type=Path,
+        default=FORECASTS_PARQUET,
+        help="Path to forecasts parquet file",
+    )
+    parser.add_argument(
+        "--forecast-seasonality",
+        type=int,
+        default=FORECAST_SEASONALITY,
+        help="Seasonality used for MASE/MSSE scaling",
+    )
     
     args = parser.parse_args()
     
@@ -196,8 +209,19 @@ def main():
     
     # Load forecasts once (shared across all methods)
     print("Loading forecasts...")
-    forecasts_df = load_forecasts()
+    forecasts_df = load_forecasts(args.forecasts_parquet)
     print(f"Loaded {len(forecasts_df)} forecast observations for {forecasts_df['load_scenario_idx'].nunique()} scenarios")
+
+    # Save combined forecast metrics table (all selected methods)
+    forecast_table = compute_forecast_metrics_table(
+        forecasts_df=forecasts_df,
+        methods=args.methods,
+        seasonality=args.forecast_seasonality,
+    )
+    forecast_table_path = args.output_dir / OUTPUT_TEMPLATES["forecast"].format(dataset=args.dataset)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    forecast_table.to_csv(forecast_table_path, index=False)
+    print(f"Saved forecast metrics table: {forecast_table_path}")
     
     # Process each method
     summaries = []

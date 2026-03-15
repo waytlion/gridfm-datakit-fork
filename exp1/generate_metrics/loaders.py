@@ -9,7 +9,7 @@ import config
 from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET, BUS_COLUMNS, GEN_COLUMNS, FORECAST_COLUMNS
 
 
-def load_forecasts() -> pd.DataFrame:
+def load_forecasts(forecasts_parquet: Path = FORECASTS_PARQUET) -> pd.DataFrame:
     """
     Load all forecast methods from unified parquet file.
     Uses parquet column names directly: load_scenario_idx, bus_id, true, xgb, snaive, tgt, sarima.
@@ -17,7 +17,7 @@ def load_forecasts() -> pd.DataFrame:
     Returns:
         DataFrame with forecast columns (parquet names unchanged).
     """
-    df = pd.read_parquet(FORECASTS_PARQUET)
+    df = pd.read_parquet(forecasts_parquet)
     
     # Validate all forecast methods are present
     missing_methods = set(FORECAST_METHODS) - set(df.columns)
