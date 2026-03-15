@@ -21,4 +21,4 @@ module load Anaconda3
 source $VENV_PATH/bin/activate
 
 # Execute the datakit generation pipeline
-srun python -m gridfm-datakit.cli generate $CONFIG
+srun python -m gridfm_datakit.cli generate $CONFIG
