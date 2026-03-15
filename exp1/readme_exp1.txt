@@ -7,7 +7,8 @@
       -> OPTIONAL: Load precomputed_profiles .csv files to google drive 
 3. Run datakit
       -> EXECUTE ONCE PER BASELINE MODEL: gridfm_datakit generate .\exp1\config\case14_generate_opf_for_forecast.yaml
-      -> OUTPUT: exp1\data\data_out
+      -> OUTPUT LOCAL: exp1\data\data_out
+      -> OUTPUT CLUSTER BARNARD: "/data/horse/ws/tibo990i-thesis_data/data_out/3yr_2019-2021/baseline_preds/case118_horizon_6_3yr/sarima"
 4. Compare AC-OPF results derived from predictions with ground truth
       -> READ AND EXECUTE: exp1\generate_metrics\compare.py
       -> OUTPUT: exp1\results\case118_horizon1_3yr2019-2021
