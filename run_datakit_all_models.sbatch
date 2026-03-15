@@ -6,21 +6,18 @@
 #SBATCH --job-name=datakit_case14
 #SBATCH --output=logs/datakit_case14_%j.log
 
-cd /home/h4/tibo990i/gridfm-datakit
+VENV_PATH="$HOME/thesis_env"
+CONFIG="exp1/configs/case118_generate_opf_for_forecast.yaml"
 
-CONFIG="${1:-exp1/configs/case14_generate_opf_for_forecast_xgb.yaml}"
-
-if [ ! -f "$CONFIG" ]; then
-    echo "Error: Config file not found: $CONFIG"
-    exit 1
-fi
+module --force purge
+source $VENV_PATH/bin/activate
 
 echo "=========================================="
 echo "Config: $CONFIG"
 echo "Start: $(date)"
 echo "=========================================="
 
-python -m gridfm_datakit.cli generate --config "$CONFIG"
+srun python gridfm_datakit generate --config "$CONFIG"
 
 echo "=========================================="
 echo "End: $(date)"
