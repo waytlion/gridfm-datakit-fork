@@ -11,7 +11,8 @@
 
 # --- Configuration ---
 VENV_PATH="$SLURM_SUBMIT_DIR/../thesis_env"
-CONFIG="phase1_generation/configs/phase1_config.yaml"
+# CONFIG="phase1_generation/configs/phase1_config.yaml"
+CONFIG="exp1/configs/case118_generate_opf_for_forecast.yaml"
 # ---------------------
 
 module purge
