@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=gridfm_datakit_gen
-#SBATCH --partition=paul
+#SBATCH --partition=paula
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=64
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00
 

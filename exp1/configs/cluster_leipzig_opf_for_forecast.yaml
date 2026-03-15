@@ -31,7 +31,7 @@ admittance_perturbation:
   type: "none"
 
 settings:
-  num_processes: 16 # Number of parallel processes to use
+  num_processes: 64 # Number of parallel processes to use
   # data_dir: "./exp1/data/data_out/case118_horizon_6_3yr/sarima" #! Directory to save generated data relative to the project root
   data_dir: "/home/sc.uni-leipzig.de/og98ohex/gridfm-datakit-fork/data_out/3yr_2019-2021/baseline_preds/case118_horizon_6_3yr/xgb" #! Directory to save generated data relative to the project root
   large_chunk_size: 1000 # Number of load scenarios processed before saving
