@@ -20,7 +20,7 @@ echo "Config: $CONFIG"
 echo "Start: $(date)"
 echo "=========================================="
 
-srun python gridfm_datakit generate --config "$CONFIG"
+srun gridfm_datakit generate "$CONFIG"
 
 echo "=========================================="
 echo "End: $(date)"
