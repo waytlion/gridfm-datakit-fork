@@ -2,8 +2,8 @@
 #SBATCH --job-name=gridfm_datakit_gen
 #SBATCH --partition=paul
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=128
-#SBATCH --mem=256G
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
 #SBATCH --time=02:00:00
 
 #SBATCH --output=logs/datakit_gen_%j.out
@@ -12,7 +12,7 @@
 # --- Configuration ---
 VENV_PATH="$SLURM_SUBMIT_DIR/../thesis_env"
 # CONFIG="phase1_generation/configs/phase1_config.yaml"
-CONFIG="exp1/configs/case118_generate_opf_for_forecast.yaml"
+CONFIG="exp1/configs/cluster_leipzig_opf_for_forecast.yaml"
 # ---------------------
 
 module purge

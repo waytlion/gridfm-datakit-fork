@@ -8,7 +8,7 @@ load:
   generator: "precomputed_profile" # Name of the load generator; options: agg_load_profile, powergraph
   agg_profile: "" # Name of the aggregated load profile
   #scenario_file: "F:/studium/MA-code/phase1_generation/preprocessing/precomputed_load_profiles.csv" # precomputed scenarios (cols: load_scenario, load, p_mw, q_mvar)
-  scenario_file: "./exp1/data/precomputed_profiles/case118_ieee_horizon6_3yr/sarima.csv"
+  scenario_file: "./exp1/data/precomputed_profiles/case118_ieee_horizon6_3yr/xgb.csv"
    # precomputed scenarios (cols: load_scenario, load, p_mw, q_mvar)
   scenarios: 23622 #! Number of flattened scenarios in scenario_file (horizon6: 3937 origins x 6 steps = 23622) 
   # (horizon24: 3919 origins x 118 steps = 94056) (horizon1: 3942 origins)
@@ -31,9 +31,9 @@ admittance_perturbation:
   type: "none"
 
 settings:
-  num_processes: 64 # Number of parallel processes to use
+  num_processes: 16 # Number of parallel processes to use
   # data_dir: "./exp1/data/data_out/case118_horizon_6_3yr/sarima" #! Directory to save generated data relative to the project root
-  data_dir: "/home/sc.uni-leipzig.de/og98ohex/gridfm-datakit-fork/data_out/3yr_2019-2021/baseline_preds/case118_horizon_6_3yr/sarima" #! Directory to save generated data relative to the project root
+  data_dir: "/home/sc.uni-leipzig.de/og98ohex/gridfm-datakit-fork/data_out/3yr_2019-2021/baseline_preds/case118_horizon_6_3yr/xgb" #! Directory to save generated data relative to the project root
   large_chunk_size: 1000 # Number of load scenarios processed before saving
   overwrite: true # If true, overwrites existing files, if false, appends to files
   mode: "opf" # Mode of the script; options: pf, opf. pf: power flow data where one or more operating limits – the inequality constraints defined in OPF, e.g., voltage magnitude or branch limits – may be violated. opf:  generates datapoints for training OPF solvers, with cost-optimal dispatches that satisfy all operating limits (OPF-feasible)
