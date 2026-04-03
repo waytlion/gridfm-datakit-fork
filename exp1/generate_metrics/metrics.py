@@ -7,6 +7,9 @@ import numpy as np
 from typing import Dict
 
 
+_EPS = 1e-8
+
+
 def compute_mae(df: pd.DataFrame, features: list) -> Dict[str, float]:
     """
     Compute MAE for specified features.
@@ -104,38 +107,38 @@ def compute_cost_metrics(gen_df: pd.DataFrame) -> Dict[str, float]:
     }
 
 
-def _compute_scaled_denominators(
+def _attach_seasonal_naive_baseline(
     df: pd.DataFrame,
-    true_col: str,
-    group_cols: list,
-    sort_col: str,
     seasonality: int,
-) -> tuple[float, float]:
-    """Compute seasonal naive scale denominators for MASE and MSSE."""
-    abs_diffs = []
-    sq_diffs = []
+    horizon_col: str | None,
+) -> pd.DataFrame:
+    """Attach naive baseline per row using value from 48 origins earlier.
 
-    ordered = df.sort_values(group_cols + [sort_col], kind="stable")
-    for _, group in ordered.groupby(group_cols, sort=False):
-        series = pd.to_numeric(group[true_col], errors="coerce").dropna().to_numpy(dtype=float)
-        if len(series) <= seasonality:
-            continue
-        diffs = series[seasonality:] - series[:-seasonality]
-        if diffs.size == 0:
-            continue
-        abs_diffs.append(np.abs(diffs))
-        sq_diffs.append(diffs ** 2)
+    Matches ST-GNN behavior: for a given forecast origin, take one past value and
+    repeat it across all future horizon steps.
+    """
+    out = df.copy()
+    out["load_scenario_idx"] = pd.to_numeric(out["load_scenario_idx"], errors="raise").astype(int)
+    out["bus_id"] = pd.to_numeric(out["bus_id"], errors="raise").astype(int)
+    out["true"] = pd.to_numeric(out["true"], errors="coerce")
 
-    if not abs_diffs:
-        return float("nan"), float("nan")
+    if horizon_col:
+        out[horizon_col] = pd.to_numeric(out[horizon_col], errors="raise").astype(int)
+        min_horizon = int(out[horizon_col].min())
+        base = out[out[horizon_col] == min_horizon][["load_scenario_idx", "bus_id", "true"]].copy()
+    else:
+        base = out[["load_scenario_idx", "bus_id", "true"]].copy()
 
-    abs_den = float(np.concatenate(abs_diffs).mean())
-    sq_den = float(np.concatenate(sq_diffs).mean())
-    return abs_den, sq_den
+    base = base.sort_values(["bus_id", "load_scenario_idx"], kind="stable")
+    base["naive"] = base.groupby("bus_id", sort=False)["true"].shift(seasonality)
+    base = base[["load_scenario_idx", "bus_id", "naive"]]
+
+    out = out.merge(base, on=["load_scenario_idx", "bus_id"], how="left")
+    return out
 
 
 def _compute_basic_errors(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, float, float, float]:
-    """Return (rmse, mae, wmape_pct, mse)."""
+    """Return (rmse, mae, wmape, mse)."""
     error = y_pred - y_true
     abs_error = np.abs(error)
     sq_error = error ** 2
@@ -145,8 +148,8 @@ def _compute_basic_errors(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float
     mse = float(sq_error.mean())
 
     denom = float(np.abs(y_true).sum())
-    wmape_pct = float(abs_error.sum() / denom * 100.0) if denom != 0.0 else float("nan")
-    return rmse, mae, wmape_pct, mse
+    wmape = float(abs_error.sum() / (denom + _EPS))
+    return rmse, mae, wmape, mse
 
 
 def compute_forecast_metrics_table(
@@ -161,8 +164,11 @@ def compute_forecast_metrics_table(
         raise ValueError(f"Missing required forecast columns: {sorted(missing)}")
 
     horizon_col = "horizon_step" if "horizon_step" in forecasts_df.columns else None
+    work_df = forecasts_df.copy()
+    work_df = _attach_seasonal_naive_baseline(work_df, seasonality=seasonality, horizon_col=horizon_col)
+
     horizon_values = (
-        sorted(pd.to_numeric(forecasts_df[horizon_col], errors="coerce").dropna().astype(int).unique().tolist())
+        sorted(pd.to_numeric(work_df[horizon_col], errors="coerce").dropna().astype(int).unique().tolist())
         if horizon_col
         else [0]
     )
@@ -177,40 +183,45 @@ def compute_forecast_metrics_table(
 
     rows = []
     for method in methods:
-        if method not in forecasts_df.columns:
+        if method not in work_df.columns:
             raise ValueError(f"Method column '{method}' not found in forecasts dataframe")
 
         for horizon in horizon_values:
             subset = (
-                forecasts_df[forecasts_df[horizon_col] == horizon]
+                work_df[work_df[horizon_col] == horizon]
                 if horizon_col
-                else forecasts_df
+                else work_df
             )
 
             y_true = pd.to_numeric(subset["true"], errors="coerce").to_numpy(dtype=float)
             y_pred = pd.to_numeric(subset[method], errors="coerce").to_numpy(dtype=float)
+            y_naive = pd.to_numeric(subset["naive"], errors="coerce").to_numpy(dtype=float)
+
             valid = np.isfinite(y_true) & np.isfinite(y_pred)
             y_true = y_true[valid]
             y_pred = y_pred[valid]
 
             if y_true.size == 0:
-                rmse = mae = wmape_pct = mse = float("nan")
+                rmse = mae = wmape = mse = float("nan")
             else:
-                rmse, mae, wmape_pct, mse = _compute_basic_errors(y_true, y_pred)
+                rmse, mae, wmape, mse = _compute_basic_errors(y_true, y_pred)
 
-            group_cols = ["bus_id"]
-            if horizon_col:
-                group_cols.append(horizon_col)
+            valid_scaled = np.isfinite(pd.to_numeric(subset["true"], errors="coerce").to_numpy(dtype=float)) & np.isfinite(pd.to_numeric(subset[method], errors="coerce").to_numpy(dtype=float)) & np.isfinite(y_naive)
+            if valid_scaled.any():
+                y_true_s = pd.to_numeric(subset["true"], errors="coerce").to_numpy(dtype=float)[valid_scaled]
+                y_pred_s = pd.to_numeric(subset[method], errors="coerce").to_numpy(dtype=float)[valid_scaled]
+                y_naive_s = y_naive[valid_scaled]
 
-            abs_den, sq_den = _compute_scaled_denominators(
-                subset,
-                true_col="true",
-                group_cols=group_cols,
-                sort_col="load_scenario_idx",
-                seasonality=seasonality,
-            )
-            mase = float(mae / abs_den) if np.isfinite(abs_den) and abs_den != 0.0 else float("nan")
-            msse = float(mse / sq_den) if np.isfinite(sq_den) and sq_den != 0.0 else float("nan")
+                mae_scaled = float(np.abs(y_pred_s - y_true_s).mean())
+                mse_scaled = float(((y_pred_s - y_true_s) ** 2).mean())
+                mae_naive = float(np.abs(y_naive_s - y_true_s).mean())
+                mse_naive = float(((y_naive_s - y_true_s) ** 2).mean())
+
+                mase = float(mae_scaled / (mae_naive + _EPS))
+                msse = float(mse_scaled / (mse_naive + _EPS))
+            else:
+                mase = float("nan")
+                msse = float("nan")
 
             rows.append(
                 {
@@ -218,14 +229,15 @@ def compute_forecast_metrics_table(
                     "Horizon": _horizon_label(int(horizon)),
                     "Pd (MW) - RMSE": rmse,
                     "Pd (MW) - MAE": mae,
-                    "Pd (MW) - wMAPE": wmape_pct,
+                    "Pd (MW) - wMAPE": wmape,
                     "Pd (MW) - MASE": mase,
                     "Pd (MW) - MSSE": msse,
                 }
             )
 
-        y_true_global = pd.to_numeric(forecasts_df["true"], errors="coerce").to_numpy(dtype=float)
-        y_pred_global = pd.to_numeric(forecasts_df[method], errors="coerce").to_numpy(dtype=float)
+        y_true_global = pd.to_numeric(work_df["true"], errors="coerce").to_numpy(dtype=float)
+        y_pred_global = pd.to_numeric(work_df[method], errors="coerce").to_numpy(dtype=float)
+        y_naive_global = pd.to_numeric(work_df["naive"], errors="coerce").to_numpy(dtype=float)
         valid_global = np.isfinite(y_true_global) & np.isfinite(y_pred_global)
         y_true_global = y_true_global[valid_global]
         y_pred_global = y_pred_global[valid_global]
@@ -235,19 +247,22 @@ def compute_forecast_metrics_table(
         else:
             rmse_g, mae_g, wmape_g, mse_g = _compute_basic_errors(y_true_global, y_pred_global)
 
-        group_cols_global = ["bus_id"]
-        if horizon_col:
-            group_cols_global.append(horizon_col)
+        valid_scaled_global = np.isfinite(pd.to_numeric(work_df["true"], errors="coerce").to_numpy(dtype=float)) & np.isfinite(pd.to_numeric(work_df[method], errors="coerce").to_numpy(dtype=float)) & np.isfinite(y_naive_global)
+        if valid_scaled_global.any():
+            y_true_sg = pd.to_numeric(work_df["true"], errors="coerce").to_numpy(dtype=float)[valid_scaled_global]
+            y_pred_sg = pd.to_numeric(work_df[method], errors="coerce").to_numpy(dtype=float)[valid_scaled_global]
+            y_naive_sg = y_naive_global[valid_scaled_global]
 
-        abs_den_g, sq_den_g = _compute_scaled_denominators(
-            forecasts_df,
-            true_col="true",
-            group_cols=group_cols_global,
-            sort_col="load_scenario_idx",
-            seasonality=seasonality,
-        )
-        mase_g = float(mae_g / abs_den_g) if np.isfinite(abs_den_g) and abs_den_g != 0.0 else float("nan")
-        msse_g = float(mse_g / sq_den_g) if np.isfinite(sq_den_g) and sq_den_g != 0.0 else float("nan")
+            mae_scaled_g = float(np.abs(y_pred_sg - y_true_sg).mean())
+            mse_scaled_g = float(((y_pred_sg - y_true_sg) ** 2).mean())
+            mae_naive_g = float(np.abs(y_naive_sg - y_true_sg).mean())
+            mse_naive_g = float(((y_naive_sg - y_true_sg) ** 2).mean())
+
+            mase_g = float(mae_scaled_g / (mae_naive_g + _EPS))
+            msse_g = float(mse_scaled_g / (mse_naive_g + _EPS))
+        else:
+            mase_g = float("nan")
+            msse_g = float("nan")
 
         rows.append(
             {

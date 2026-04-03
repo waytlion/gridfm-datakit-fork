@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Tuple, Dict
 import config 
-from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET, BUS_COLUMNS, GEN_COLUMNS, FORECAST_COLUMNS
+from config import PARQUET_FILES, FORECAST_METHODS, FORECASTS_PARQUET, BUS_COLUMNS, GEN_COLUMNS
 
 
 def load_forecasts(forecasts_parquet: Path = FORECASTS_PARQUET) -> pd.DataFrame:
@@ -19,13 +19,9 @@ def load_forecasts(forecasts_parquet: Path = FORECASTS_PARQUET) -> pd.DataFrame:
     """
     df = pd.read_parquet(forecasts_parquet)
     
-    # Validate all forecast methods are present
-    missing_methods = set(FORECAST_METHODS) - set(df.columns)
-    if missing_methods:
-        raise ValueError(f"Missing forecast methods in parquet: {missing_methods}")
-    
-    # Validate expected columns exist
-    missing_cols = set(FORECAST_COLUMNS) - set(df.columns)
+    # Validate core columns needed by comparison pipeline
+    required_cols = {"load_scenario_idx", "bus_id", "true"}
+    missing_cols = required_cols - set(df.columns)
     if missing_cols:
         raise ValueError(f"Missing columns in forecasts.parquet: {missing_cols}")
     

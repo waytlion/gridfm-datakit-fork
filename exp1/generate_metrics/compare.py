@@ -7,7 +7,8 @@ Usage:
         --predicted-opf-base-dir exp1/data/data_out/case118_horizon_1_3yr \
         --ground-truth-dir ../data/data_out/3yr_2019-2021/case118_ieee/raw \
         --output-dir exp1/results/case118_horizon1_3yr2019-2021 \
-        --dataset case118_ieee
+        --dataset case118_ieee \
+        --forecasts-parquet exp1/data/data_in/XX.parquet
         
     Or with defaults:
     python exp1/generate_metrics/compare.py  # Uses default paths
@@ -36,6 +37,39 @@ from metrics import (
 )
 
 
+def _build_predicted_scenario_map(forecasts_df: pd.DataFrame) -> dict[int, int]:
+    """Map predicted OPF flattened scenario indices to ground-truth scenario indices."""
+    if "horizon_step" in forecasts_df.columns:
+        keys = (
+            forecasts_df[["load_scenario_idx", "horizon_step"]]
+            .drop_duplicates()
+            .copy()
+        )
+        keys["load_scenario_idx"] = pd.to_numeric(
+            keys["load_scenario_idx"],
+            errors="raise",
+        ).astype(int)
+        keys["horizon_step"] = pd.to_numeric(
+            keys["horizon_step"],
+            errors="raise",
+        ).astype(int)
+
+        keys = keys.sort_values(["load_scenario_idx", "horizon_step"], kind="stable").reset_index(drop=True)
+        keys["pred_flat_idx"] = keys.index.astype(int)
+        keys["target_load_scenario_idx"] = (
+            keys["load_scenario_idx"] + keys["horizon_step"]
+        ).astype(int)
+        return dict(
+            zip(
+                keys["pred_flat_idx"].tolist(),
+                keys["target_load_scenario_idx"].tolist(),
+            )
+        )
+
+    forecast_scenarios = sorted(pd.to_numeric(forecasts_df["load_scenario_idx"], errors="raise").astype(int).unique())
+    return dict(enumerate(forecast_scenarios))
+
+
 def compare_single_method(
     method: str,
     forecasts_df: pd.DataFrame,
@@ -43,6 +77,7 @@ def compare_single_method(
     predicted_opf_dir: Path,
     output_dir: Path,
     dataset: str,
+    pred_scenario_map: dict[int, int],
 ) -> dict:
     """
     Run complete comparison for a single forecast method.
@@ -82,10 +117,17 @@ def compare_single_method(
     true_gen = load_datakit_gen(ground_truth_dir)
     
     # Remap predicted OPF scenario indices (0-based) to match ground-truth indices
-    forecast_scenarios = sorted(forecasts_df["load_scenario_idx"].unique())
-    pred_scenario_map = dict(enumerate(forecast_scenarios))
     pred_bus["load_scenario_idx"] = pred_bus["load_scenario_idx"].map(pred_scenario_map)
     pred_gen["load_scenario_idx"] = pred_gen["load_scenario_idx"].map(pred_scenario_map)
+
+    if pred_bus["load_scenario_idx"].isna().any() or pred_gen["load_scenario_idx"].isna().any():
+        raise ValueError(
+            "Predicted OPF scenario mapping produced NaN values. "
+            "Forecast parquet and OPF output likely use incompatible flattened scenario indexing."
+        )
+
+    pred_bus["load_scenario_idx"] = pred_bus["load_scenario_idx"].astype(int)
+    pred_gen["load_scenario_idx"] = pred_gen["load_scenario_idx"].astype(int)
 
     # 3. Align OPF results
     print("Aligning OPF results...")
@@ -212,10 +254,19 @@ def main():
     forecasts_df = load_forecasts(args.forecasts_parquet)
     print(f"Loaded {len(forecasts_df)} forecast observations for {forecasts_df['load_scenario_idx'].nunique()} scenarios")
 
+    available_methods = [method for method in args.methods if method in forecasts_df.columns]
+    missing_methods = [method for method in args.methods if method not in forecasts_df.columns]
+    if missing_methods:
+        print(f"Skipping unavailable forecast methods in parquet: {missing_methods}")
+    if not available_methods:
+        raise ValueError("None of the requested forecast methods are present in forecasts parquet")
+
+    pred_scenario_map = _build_predicted_scenario_map(forecasts_df)
+
     # Save combined forecast metrics table (all selected methods)
     forecast_table = compute_forecast_metrics_table(
         forecasts_df=forecasts_df,
-        methods=args.methods,
+        methods=available_methods,
         seasonality=args.forecast_seasonality,
     )
     forecast_table_path = args.output_dir / OUTPUT_TEMPLATES["forecast"].format(dataset=args.dataset)
@@ -225,7 +276,7 @@ def main():
     
     # Process each method
     summaries = []
-    for method in args.methods:
+    for method in available_methods:
         predicted_opf_dir = args.predicted_opf_base_dir / method / args.dataset / "raw"
         
         if not predicted_opf_dir.exists():
@@ -240,6 +291,7 @@ def main():
                 predicted_opf_dir=predicted_opf_dir,
                 output_dir=args.output_dir,
                 dataset=args.dataset,
+                pred_scenario_map=pred_scenario_map,
             )
             summaries.append(summary)
         except Exception as e:
