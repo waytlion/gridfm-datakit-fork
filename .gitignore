@@ -27,3 +27,6 @@ phase1_generation/preprocessing/case500_goc_3yr_precomputed_load_profiles.csv
 phase1_generation\preprocessing\case500_goc_3yr_precomputed_load_profiles.csv
 exp1/data/precomputed_profiles
 *.csv
+datakit_env_OLD/
+logs/
+mlflow.db

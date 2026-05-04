@@ -112,9 +112,7 @@ def _attach_seasonal_naive_baseline(
     seasonality: int,
     horizon_col: str | None,
 ) -> pd.DataFrame:
-    """Attach naive baseline per row using value from 48 origins earlier.
-
-    Matches ST-GNN behavior: for a given forecast origin, take one past value and
+    """Attach naive baseline per row using value from 48 origins earlier. for a given forecast origin, take one past value and
     repeat it across all future horizon steps.
     """
     out = df.copy()
