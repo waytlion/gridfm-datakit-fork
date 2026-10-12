@@ -196,10 +196,17 @@ def get_load_scenario_generator(args: NestedNamespace) -> LoadScenarioGeneratorB
                 f"The following arguments are not used by the powergraph generator: {unused_args}",
                 UserWarning,
             )
+        return Powergraph(args.agg_profile)
 
     if args.generator == "precomputed_profile":
         print("precomputed_profile being used")
         return PrecomputedProfile(args.scenario_file)
+
+    # If we reach this point, the generator name was not recognized.
+    raise ValueError(
+        f"Unknown load.generator: '{getattr(args, 'generator', None)}'. "
+        "Expected one of: 'agg_load_profile', 'powergraph', 'precomputed_profile'.",
+    )
 
 
 def initialize_topology_generator(
